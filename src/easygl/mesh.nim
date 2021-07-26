@@ -1,4 +1,4 @@
-import 
+import
     ../easygl,
     utils,
     opengl,
@@ -39,7 +39,7 @@ proc setupMesh(mesh:var Mesh) =
     mesh.EBO = genBuffer()
     bindVertexArray(mesh.VAO)
     bindBuffer(GL_ARRAY_BUFFER,mesh.VBO)
-    
+
     bufferData(GL_ARRAY_BUFFER,mesh.vertices,GL_STATIC_DRAW)
 
     bindBuffer(GL_ELEMENT_ARRAY_BUFFER,mesh.EBO)
@@ -67,7 +67,7 @@ proc newMesh*(vertices:seq[Vertex], indices:seq[uint32], textures:seq[Texture]) 
 
 proc draw*(mesh:Mesh,shaderProgram:ShaderProgramId) =
     var diffuseNr,specularNr,normalNr,heightNr = 0'u32
-    for i,tex in mesh.textures:       
+    for i,tex in mesh.textures:
         activeTexture((GL_TEXTURE0.ord + i).GLenum)
         let texIndex =
             case tex.texType:
@@ -83,7 +83,7 @@ proc draw*(mesh:Mesh,shaderProgram:ShaderProgramId) =
                 of TextureType.TextureHeight:
                     heightNr.inc()
                     heightNr
-        let uniform = $tex.texType & $texIndex        
+        let uniform = $tex.texType & $texIndex
         shaderProgram.setInt(uniform,i.int32)
         bindTexture(GL_TEXTURE_2D, mesh.textures[i].id)
 

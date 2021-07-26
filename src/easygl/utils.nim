@@ -1,17 +1,16 @@
-import 
+import
     ../easygl,
     stb_image/read as stbi,
     opengl,
     glm,
-    options 
- 
+    options
 
-proc compileAndAttachShaderString*(shaderType:GLenum, shaderSrc: string, programId:ShaderProgramId) : ShaderId =    
+proc compileAndAttachShaderString*(shaderType:GLenum, shaderSrc: string, programId:ShaderProgramId) : ShaderId =
     let shaderId = createShader(shaderType)
     shaderSource(shaderId,shaderSrc)
     compileShader(shaderId)
     if not getShaderCompileStatus(shaderId):
-        echo "Shader Compile Error:" 
+        echo "Shader Compile Error:"
         echo getShaderInfoLog(shaderId)
     else:
         attachShader(programId,shaderId)
@@ -27,24 +26,24 @@ proc createAndLinkProgramString*(vertexSrc:string, fragmentSrc:string, geometryS
         else:
             0.ShaderId
 
-    linkProgram(programId)    
+    linkProgram(programId)
 
     if not getProgramLinkStatus(programId):
         echo "Link Error:"
         echo getProgramInfoLog(programId)
-    
+
     deleteShader(vert)
     deleteShader(frag)
     if geometrySrc.isSome: deleteShader(geo)
     programId
 
 # Compiles and attaches in 1 step with error reporting
-proc compileAndAttachShader*(shaderType:GLenum, shaderPath: string, programId:ShaderProgramId) : ShaderId =    
+proc compileAndAttachShader*(shaderType:GLenum, shaderPath: string, programId:ShaderProgramId) : ShaderId =
     let shaderId = createShader(shaderType)
     shaderSource(shaderId,readFile(shaderPath))
     compileShader(shaderId)
     if not getShaderCompileStatus(shaderId):
-        echo "Shader Compile Error ("&shaderPath&"):" 
+        echo "Shader Compile Error ("&shaderPath&"):"
         echo getShaderInfoLog(shaderId)
     else:
         attachShader(programId,shaderId)
@@ -61,60 +60,60 @@ proc createAndLinkProgram*(vertexPath:string, fragmentPath:string, geometryPath:
         else:
             0.ShaderId
 
-    linkProgram(programId)    
+    linkProgram(programId)
 
     if not getProgramLinkStatus(programId):
         echo "Link Error:"
         echo getProgramInfoLog(programId)
-    
+
     deleteShader(vert)
     deleteShader(frag)
     if geometryPath.isSome: deleteShader(geo)
     programId
 
-#handles most image types automatically 
-proc loadCubemap*(faces:array[6,string]) : TextureId =        
+#handles most image types automatically
+proc loadCubemap*(faces:array[6,string]) : TextureId =
         let textureId = genBindTexture(GL_TEXTURE_CUBE_MAP)
-        
-        stbi.setFlipVerticallyOnLoad(false)               
+
+        stbi.setFlipVerticallyOnLoad(false)
         # todo parallelize this
-        
-        for i,face in faces:            
-            var width,height,channels:int                
-            let data = stbi.load(face,width,height,channels,stbi.Default)        
+
+        for i,face in faces:
+            var width,height,channels:int
+            let data = stbi.load(face,width,height,channels,stbi.Default)
             let target = (GL_TEXTURE_CUBE_MAP_POSITIVE_X.int+i).GLenum
-            texImage2D(target,0'i32,GL_RGB,width.int32,height.int32,GL_RGB,GL_UNSIGNED_BYTE,data)                    
-                                                          
+            texImage2D(target,0'i32,GL_RGB,width.int32,height.int32,GL_RGB,GL_UNSIGNED_BYTE,data)
+
         texParameteri(GL_TEXTURE_CUBE_MAP,GL_TEXTURE_MIN_FILTER,GL_LINEAR)
-        texParameteri(GL_TEXTURE_CUBE_MAP,GL_TEXTURE_MAG_FILTER,GL_LINEAR)               
+        texParameteri(GL_TEXTURE_CUBE_MAP,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
         texParameteri(GL_TEXTURE_CUBE_MAP,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE)
         texParameteri(GL_TEXTURE_CUBE_MAP,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE)
         texParameteri(GL_TEXTURE_CUBE_MAP,GL_TEXTURE_WRAP_R,GL_CLAMP_TO_EDGE)
         textureId
-       
-            
-proc loadTextureWithMips*(path:string, gammaCorrection:bool = false) : TextureId =        
-    let textureId = genBindTexture(GL_Texture2D)    
-    stbi.setFlipVerticallyOnLoad(true)               
-    var width,height,channels:int        
-    let data = stbi.load(path,width,height,channels,stbi.Default)        
-    let gammaFormat = 
-        if gammaCorrection: 
-            GL_SRGB 
-        else: 
+
+
+proc loadTextureWithMips*(path:string, gammaCorrection:bool = false) : TextureId =
+    let textureId = genBindTexture(GL_Texture2D)
+    stbi.setFlipVerticallyOnLoad(true)
+    var width,height,channels:int
+    let data = stbi.load(path,width,height,channels,stbi.Default)
+    let gammaFormat =
+        if gammaCorrection:
+            GL_SRGB
+        else:
             GL_RGB
-            
-    let (internalFormat,dataFormat,param) = 
-        if channels == 1:                    
+
+    let (internalFormat,dataFormat,param) =
+        if channels == 1:
             (GL_RED,GL_RED,GL_REPEAT)
-        elif channels == 3:                    
+        elif channels == 3:
             (gammaFormat,GL_RGB,GL_REPEAT)
         elif channels == 4:
             (gammaFormat,GL_RGBA,GL_CLAMP_TO_EDGE)
-        else:            
-            ( echo "texture unknown, assuming rgb";        
+        else:
+            ( echo "texture unknown, assuming rgb";
                    (GL_RGB,GL_RGB,GL_REPEAT) )
-            
+
     texImage2D(GL_TEXTURE_2D,
                0'i32,
                internalFormat,
@@ -124,14 +123,54 @@ proc loadTextureWithMips*(path:string, gammaCorrection:bool = false) : TextureId
                GL_UNSIGNED_BYTE,
                data)
 
-    generateMipmap(GL_TEXTURE_2D)        
-    
+    generateMipmap(GL_TEXTURE_2D)
+
     texParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,param)
-    texParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,param)            
+    texParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,param)
     texParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR)
-    texParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)               
+    texParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
     textureId
-                
+
+
+proc loadTextureWithMipsFromBytes*(bytes: seq[byte], gammaCorrection: bool = false) : TextureId =
+    let textureId = genBindTexture(GL_Texture2D)
+    stbi.setFlipVerticallyOnLoad(true)
+    var width,height,channels:int
+    let data = stbi.loadFromMemory(bytes, width, height, channels, stbi.Default)
+    let gammaFormat =
+        if gammaCorrection:
+            GL_SRGB
+        else:
+            GL_RGB
+
+    let (internalFormat,dataFormat,param) =
+        if channels == 1:
+            (GL_RED,GL_RED,GL_REPEAT)
+        elif channels == 3:
+            (gammaFormat,GL_RGB,GL_REPEAT)
+        elif channels == 4:
+            (gammaFormat,GL_RGBA,GL_CLAMP_TO_EDGE)
+        else:
+            ( echo "texture unknown, assuming rgb";
+                   (GL_RGB,GL_RGB,GL_REPEAT) )
+
+    texImage2D(GL_TEXTURE_2D,
+               0'i32,
+               internalFormat,
+               width.int32,
+               height.int32,
+               dataFormat,
+               GL_UNSIGNED_BYTE,
+               data)
+
+    generateMipmap(GL_TEXTURE_2D)
+
+    texParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,param)
+    texParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,param)
+    texParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR)
+    texParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
+    textureId
+
 
 # Uniform funcs with easier / shorter names and glm types
 template setBool*(program:ShaderProgramId, name: string, value: bool) =
@@ -139,7 +178,7 @@ template setBool*(program:ShaderProgramId, name: string, value: bool) =
 
 template setInt*(program:ShaderProgramId, name: string, value: int32) =
     glUniform1i(getUniformLocation(program,name).GLint,value.GLint)
-    
+
 template setFloat*(program:ShaderProgramId, name: string, value: float32) =
     glUniform1f(getUniformLocation(program,name).GLint,value.GLfloat)
 
@@ -148,10 +187,10 @@ template setVec2*(program:ShaderProgramId, name: string, value:var Vec2f) =
 
 template setVec2*(program:ShaderProgramId, name: string, x:float32, y:float32) =
     glUniform2f(getUniformLocation(program,name).GLint,x.GLfloat,y.GLfloat)
-    
+
 template setVec3*(program:ShaderProgramId, name: string, value:var Vec3f) =
     glUniform3fv(getUniformLocation(program,name).GLint,1,value.caddr)
-    
+
 template setVec3*(program:ShaderProgramId, name: string, x:float32, y:float32, z:float32) =
     glUniform3f(getUniformLocation(program,name).GLint,x.GLfloat,y.GLfloat,z.GLfloat)
 
@@ -160,6 +199,6 @@ template setVec4*(program:ShaderProgramId, name:string, value: var Vec4f) =
 
 template setVec4*(program:ShaderProgramId, name: string, x:float32, y:float32, z:float32, w:float32) =
     glUniform4f(getUniformLocation(program,name).GLint,x.GLfloat,y.GLfloat,z.GLfloat,w.GLfloat)
-            
+
 template setMat4*(program:ShaderProgramId, name: string, value: var Mat4f ) =
     glUniformMatrix4fv(getUniformLocation(program,name).GLint,1,GL_FALSE,value.caddr)

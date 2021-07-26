@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.1.2"
+version       = "0.1.3"
 author        = "Jack Mott"
 description   = "type safe opengl wrapper"
 license       = "MIT"
